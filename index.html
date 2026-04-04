@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home Controller - Secured</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            width: 90%;
+            max-width: 800px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            display: none; /* hidden until logged in */
+        }
+
+        .login-box {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            width: 300px;
+            text-align: center;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-weight: 600;
+            margin: 0;
+            letter-spacing: 1px;
+            background: -webkit-linear-gradient(#4facfe, #00f2fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .toggle-btn, .login-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            outline: none;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .login-btn { background: rgba(0, 242, 254, 0.3); border-color: #00f2fe; }
+        .login-btn:hover { background: #00f2fe; color: black; }
+
+        .error-msg {
+            color: #ff4757;
+            font-size: 0.9em;
+            margin-top: 10px;
+            min-height: 20px;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #ff4757;
+            margin-right: 8px;
+            box-shadow: 0 0 10px #ff4757;
+            transition: 0.3s;
+        }
+        
+        .status-dot.connected {
+            background-color: #2ed573;
+            box-shadow: 0 0 10px #2ed573;
+        }
+
+        .devices-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .device-card {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .device-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        .device-card.on {
+            background: rgba(0, 242, 254, 0.2);
+            border: 1px solid rgba(0, 242, 254, 0.5);
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.2);
+        }
+
+        .device-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-transform: capitalize;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-box" id="login-box">
+    <h1>Login</h1>
+    <p>Secure Hub Access</p>
+    <div>
+        <input type="text" id="username" placeholder="Username" value="admin" />
+        <input type="password" id="password" placeholder="Password" value="admin123" />
+        <button class="login-btn" onclick="attemptLogin()">Connect</button>
+        <div class="error-msg" id="error-msg"></div>
+        <div style="font-size: 0.8em; margin-top: 15px; color: #ddd;">
+            <i>Make sure to accept the self-signed certificate by visiting <a href="https://localhost:8080" style="color: #00f2fe">https://localhost:8080</a> first.</i>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard" id="dashboard">
+    <header>
+        <h1>Smart Home Hub</h1>
+        <p><span class="status-dot" id="ws-status"></span> Secure WebSocket: <span id="ws-text">Connected</span></p>
+    </header>
+
+    <div class="devices-grid" id="devices-container">
+        <!-- Devices injected dynamically -->
+    </div>
+</div>
+
+<script>
+    const loginBox = document.getElementById('login-box');
+    const dashboard = document.getElementById('dashboard');
+    const errorMsg = document.getElementById('error-msg');
+    
+    const wsStatusDot = document.getElementById('ws-status');
+    const wsText = document.getElementById('ws-text');
+    const devicesContainer = document.getElementById('devices-container');
+    
+    let ws;
+    let registeredDevices = {};
+    let activeUsername = "";
+    let activePassword = "";
+
+    function attemptLogin() {
+        activeUsername = document.getElementById('username').value;
+        activePassword = document.getElementById('password').value;
+        
+        if(!activeUsername || !activePassword) {
+            errorMsg.innerText = "Please enter credentials.";
+            return;
+        }
+        errorMsg.innerText = "Connecting via WSS...";
+        
+        connect();
+    }
+
+    function connect() {
+        // Use wss:// for Secure WebSocket
+        // Connect to localhost so the CN=localhost cert is matched
+        ws = new WebSocket('wss://localhost:8080');
+
+        ws.onopen = () => {
+            console.log("WebSocket connected. Sending Auth Frame...");
+            ws.send(JSON.stringify({
+                type: 'auth',
+                username: activeUsername,
+                password: activePassword
+            }));
+        };
+
+        ws.onerror = (err) => {
+            console.error("WS Error (Likely SSL Cert error):", err);
+            if (loginBox.style.display !== 'none') {
+                errorMsg.innerHTML = "Connection failed. Please ensure you <a href='https://localhost:8080' target='_blank' style='color:#00f2fe;'>accept the self-signed certificate</a> first.";
+            }
+        };
+
+        ws.onclose = () => {
+            wsStatusDot.classList.remove('connected');
+            wsText.innerText = 'Disconnected - Reconnecting...';
+            
+            // Reconnect logic only if we are in dashboard
+            if (loginBox.style.display === 'none') {
+                setTimeout(connect, 3000); 
+            }
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'auth_ack') {
+                    if (data.status === 'success') {
+                        errorMsg.innerText = "";
+                        loginBox.style.display = 'none';
+                        dashboard.style.display = 'block';
+                        wsStatusDot.classList.add('connected');
+                    } else {
+                        errorMsg.innerText = "Invalid username or password.";
+                        ws.close();
+                    }
+                } else if (data.type === 'status') {
+                    handleStatusUpdate(data.device, data.state);
+                }
+            } catch (e) {
+                console.error("Invalid JSON:", event.data);
+            }
+        };
+    }
+
+    function handleStatusUpdate(deviceId, state) {
+        if (!registeredDevices[deviceId]) {
+            const card = document.createElement('div');
+            card.className = 'device-card';
+            card.id = `device-${deviceId}`;
+            
+            card.innerHTML = `
+                <div class="device-name">${deviceId}</div>
+                <button class="toggle-btn" onclick="toggleDevice('${deviceId}')">TURN ON</button>
+            `;
+            devicesContainer.appendChild(card);
+            registeredDevices[deviceId] = card;
+        }
+
+        const card = registeredDevices[deviceId];
+        const btn = card.querySelector('button');
+
+        if (state === 'ON') {
+            card.classList.add('on');
+            btn.innerText = 'TURN OFF';
+        } else {
+            card.classList.remove('on');
+            btn.innerText = 'TURN ON';
+        }
+    }
+
+    window.toggleDevice = function(deviceId) {
+        const card = registeredDevices[deviceId];
+        if (!card) return;
+        
+        const isCurrentlyOn = card.classList.contains('on');
+        const targetState = isCurrentlyOn ? 'OFF' : 'ON';
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'command',
+                device: deviceId,
+                action: targetState
+            }));
+        }
+    };
+</script>
+
+</body>
+</html>

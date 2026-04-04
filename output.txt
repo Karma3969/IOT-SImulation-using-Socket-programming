@@ -1,0 +1,29 @@
+gcc -Wall -O2 -o websocket_server websocket_server.c utils.c db.c -lsqlite3 -lssl -lcrypto
+websocket_server.c: In function 'handle_json_message':
+websocket_server.c:167:17: warning: 'strncpy' output may be truncated copying 63 bytes from a string of length 63 [-Wstringop-truncation]
+  167 |                 strncpy(c->username, username, sizeof(c->username)-1);
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+websocket_server.c:176:21: warning: 'strncpy' output may be truncated copying 31 bytes from a string of length 31 [-Wstringop-truncation]
+  176 |                     strncpy(c->device_id, dev_id, sizeof(c->device_id)-1);
+      |                     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+utils.c: In function 'my_SHA1_Final':
+utils.c:112:17: warning: unused variable 'j' [-Wunused-variable]
+  112 |     uint32_t i, j;
+      |                 ^
+utils.c: In function 'parse_ws_frame':
+utils.c:192:9: warning: unused variable 'fin' [-Wunused-variable]
+  192 |     int fin = (first_byte & 0x80) != 0;
+      |         ^~~
+gcc -Wall -O2 -o device_client device_client.c utils.c -lssl -lcrypto
+device_client.c: In function 'main':
+device_client.c:186:29: warning: 'strncpy' output may be truncated copying 15 bytes from a string of length 15 [-Wstringop-truncation]
+  186 |                             strncpy(device_status, action, sizeof(device_status)-1);
+      |                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+utils.c: In function 'my_SHA1_Final':
+utils.c:112:17: warning: unused variable 'j' [-Wunused-variable]
+  112 |     uint32_t i, j;
+      |                 ^
+utils.c: In function 'parse_ws_frame':
+utils.c:192:9: warning: unused variable 'fin' [-Wunused-variable]
+  192 |     int fin = (first_byte & 0x80) != 0;
+      |         ^~~
